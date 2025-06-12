@@ -212,7 +212,14 @@ class EMA:
 
 
 class Diffusion:
-    def __init__(self, noise_steps=1000, beta_start=1e-4, beta_end=0.02, img_size=(64, 256), args=None):
+    def __init__(
+        self, 
+        noise_steps=1000, 
+        beta_start=1e-4, 
+        beta_end=0.02, 
+        img_size=(64, 256), 
+        args=None
+    ):
         self.noise_steps = noise_steps
         self.beta_start = beta_start
         self.beta_end = beta_end
@@ -301,7 +308,24 @@ class Diffusion:
             x = (x * 255).type(torch.uint8)
         return x
 
-    def sampling(self, model, vae, n, x_text, labels, args, style_extractor, noise_scheduler, mix_rate=None, cfg_scale=3, transform=None, character_classes=None, tokenizer=None, text_encoder=None, run_idx=None):
+    def sampling(
+        self, 
+        model, 
+        vae, 
+        n, 
+        x_text, 
+        labels, 
+        args, 
+        style_extractor, 
+        noise_scheduler, 
+        mix_rate=None, 
+        cfg_scale=3, 
+        transform=None, 
+        character_classes=None, 
+        tokenizer=None, 
+        text_encoder=None, 
+        run_idx=None
+    ):
         model.eval()
         tensor_list = []
         
@@ -309,7 +333,13 @@ class Diffusion:
             style_images = None
             text_features = x_text #[x_text]*n
             #print('text features', text_features.shape)
-            text_features = tokenizer(text_features, padding="max_length", truncation=True, return_tensors="pt", max_length=40).to(args.device)
+            text_features = tokenizer(
+                text_features, 
+                padding="max_length", 
+                truncation=True, 
+                return_tensors="pt", 
+                max_length=40
+            ).to(args.device)
             if args.img_feat == True:
                 #pick random image according to specific style
                 with open('./writers_dict_train.json', 'r') as f:
@@ -392,6 +422,7 @@ class Diffusion:
                             
                             try:
                                 img_s = Image.open(file_path).convert('RGB')
+                                print(img_s)
                             except ValueError:
                                 # Handle the exception (e.g., print an error message)
                                 print(f"Error loading image from {file_path}")
@@ -455,8 +486,7 @@ class Diffusion:
                     noisy_images = noise_scheduler.add_noise(
                         cor_images, x_noise, timesteps
                     )
-                    x = noisy_images
-                 
+                    x = noisy_images          
             else:
                 x = torch.randn((n, 3, self.img_size[0], self.img_size[1])).to(args.device)
             
@@ -468,7 +498,15 @@ class Diffusion:
                 t = (torch.ones(n) * t_item).long().to(args.device)
 
                 with torch.no_grad():
-                    noisy_residual = model(x, t, text_features, labels, original_images=style_images, mix_rate=mix_rate, style_extractor=style_features)
+                    noisy_residual = model(
+                        x, 
+                        t, 
+                        text_features, 
+                        labels, 
+                        original_images=style_images, 
+                        mix_rate=mix_rate, 
+                        style_extractor=style_features
+                    )
                     prev_noisy_sample = noise_scheduler.step(noisy_residual, time, x).prev_sample
                     x = prev_noisy_sample
 
@@ -711,7 +749,21 @@ def main():
     if args.unet=='unet_latent':
         style_classes=339 ## !!!
         # text_encoder=None
-        unet = UNetModel(image_size = args.img_size, in_channels=args.channels, model_channels=args.emb_dim, out_channels=args.channels, num_res_blocks=args.num_res_blocks, attention_resolutions=(1,1), channel_mult=(1, 1), num_heads=args.num_heads, num_classes=style_classes, context_dim=args.emb_dim, vocab_size=vocab_size, text_encoder=text_encoder, args=args)#.to(args.device)
+        unet = UNetModel(
+            image_size = args.img_size, 
+            in_channels=args.channels, 
+            model_channels=args.emb_dim, 
+            out_channels=args.channels, 
+            num_res_blocks=args.num_res_blocks, 
+            attention_resolutions=(1,1), 
+            channel_mult=(1, 1), 
+            num_heads=args.num_heads, 
+            num_classes=style_classes, 
+            context_dim=args.emb_dim, 
+            vocab_size=vocab_size, 
+            text_encoder=text_encoder, 
+            args=args
+        )#.to(args.device)
     
     unet = DataParallel(unet, device_ids=device_ids)
     unet = unet.to(args.device)
@@ -750,7 +802,12 @@ def main():
     ddim = DDIMScheduler.from_pretrained(args.stable_dif_path, subfolder="scheduler")
     
     #### STYLE ####
-    feature_extractor = ImageEncoder(model_name='mobilenetv2_100', num_classes=0, pretrained=True, trainable=True)
+    feature_extractor = ImageEncoder(
+        model_name='mobilenetv2_100', 
+        num_classes=0, 
+        pretrained=True, 
+        trainable=True
+    )
     PATH = args.style_path 
     
     state_dict = torch.load(PATH, map_location=args.device)
@@ -780,21 +837,37 @@ def main():
         ema_model.eval()
         
         if args.sampling_mode == 'single_sampling':
-            x_text = ['hello', 'cat']
+            x_text = ['hello']
+            word = "Hello"
             for x_text in x_text:
                 print('Word:', x_text)
                 s = random.randint(0, 339) #index for style class
                 
                 print('style', s)
                 labels = torch.tensor([s]).long().to(args.device)
-                ema_sampled_images = diffusion.sampling(ema_model, vae, n=len(labels), x_text=x_text, labels=labels, args=args, style_extractor=feature_extractor, noise_scheduler=ddim, transform=transform, character_classes=None, tokenizer=tokenizer, text_encoder=text_encoder, run_idx=None)  
+                ema_sampled_images = diffusion.sampling(
+                    ema_model, 
+                    vae, 
+                    n=len(labels), 
+                    x_text=word, 
+                    labels=labels, 
+                    args=args, 
+                    style_extractor=feature_extractor, 
+                    noise_scheduler=ddim, 
+                    transform=None, 
+                    character_classes=None, 
+                    tokenizer=tokenizer, 
+                    text_encoder=text_encoder, 
+                    run_idx=None
+                )  
+
                 save_single_images(ema_sampled_images, os.path.join(f'./image_samples/', f'{x_text}_style_{s}.png'), args)
 
         
         elif args.sampling_mode == 'paragraph':
             print('Sampling paragraph')
             #make the code to generate lines
-            lines = 'In this work , we focus on style variation . We present a novel method to control the style of the text . Our method is able to mimic various writing styles .'
+            lines = 'Hello'
             fakes= []
             gap = np.ones((64, 16))
             max_line_width = 900
@@ -810,7 +883,22 @@ def main():
                 print('Word:', word)
                 print('Style:', s)
                 labels = torch.tensor([s]).long().to(args.device)
-                ema_sampled_images = diffusion.sampling(ema_model, vae, n=len(labels), x_text=word, labels=labels, args=args, style_extractor=feature_extractor, noise_scheduler=ddim, transform=transform, character_classes=None, tokenizer=tokenizer, text_encoder=text_encoder, clip_model=None, run_idx=None)  
+                # sampling(self, model, vae, n, x_text, labels, args, style_extractor, noise_scheduler, mix_rate=None, cfg_scale=3, transform=None, character_classes=None, tokenizer=None, text_encoder=None, run_idx=None)
+                ema_sampled_images = diffusion.sampling(
+                    ema_model, 
+                    vae, 
+                    n=len(labels), 
+                    x_text=word, 
+                    labels=labels, 
+                    args=args, 
+                    style_extractor=feature_extractor, 
+                    noise_scheduler=ddim, 
+                    transform=transform, 
+                    character_classes=None, 
+                    tokenizer=tokenizer, 
+                    text_encoder=text_encoder, 
+                    run_idx=None
+                )  
                 #print('ema_sampled_images', ema_sampled_images.shape)
                 image = ema_sampled_images.squeeze(0)
                 
@@ -858,6 +946,7 @@ def main():
                 print(f'Word {word} - scaled_img {scaled_img.size}')
                 # Padding
                 #if word is in punctuation:
+                punctuation = [".", ",", "!"]
                 if word in punctuation:
                     #rescale to height 10
                     w_punc = scaled_img.width

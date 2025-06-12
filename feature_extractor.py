@@ -16,6 +16,8 @@ class ImageEncoder(nn.Module):
         #self.model = torch.compile(self.model, backend="inductor")
         for p in self.model.parameters():
             p.requires_grad = trainable
+
+            
     def forward(self, x):
         x = self.model(x)
         return x   

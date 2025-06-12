@@ -1358,8 +1358,3 @@ class UNetModel(nn.Module):
         else:
             
             return self.out(h)
-
-
-
-
-
